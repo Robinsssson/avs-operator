@@ -1,4 +1,4 @@
-#include "lib/avaspecx64.h"
+#include "AVSManager.h"
 #include <iostream>
 #include <string>
 #include <thread>
@@ -29,7 +29,7 @@ void listen_user_input_flag() {
         std::getline(std::cin, input);
         std::cout << "Get Str is " << input << std::endl;
         if (input == "exit") {
-            exit_thread_flag = false;
+            exit_thread_flag = true;
             running_flag = false;
         }
         if (input == "stop") {

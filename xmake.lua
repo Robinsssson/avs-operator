@@ -1,16 +1,16 @@
 add_rules("mode.debug", "mode.release")
-
+add_rules("plugin.compile_commands.autoupdate", {outputdir = "."})
 target("avs-project")
     set_kind("binary")
     set_toolchains("gcc")
-    add_files("src/main.cpp")
-
+    add_files("src/*.cpp")
+    add_includedirs("./spdlog/include")
     -- 设置库目录
     add_linkdirs("src/lib")
 
     -- 设置要链接的库名称（不需要`lib`前缀和`.lib`扩展名）
     add_links("avaspecx64")
-
+    add_links("spdlog")
     -- 如果需要强制使用特定的链接器选项，可以通过`add_ldflags`添加（如特殊编译参数）
     -- add_ldflags("/path/to/flag", {force = true})
 

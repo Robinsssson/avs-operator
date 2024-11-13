@@ -1,0 +1,16 @@
+[
+{
+  "directory": "D:\\project\\avs-project",
+  "arguments": ["gcc.exe", "-c", "-m64", "-g", "-O0", "-Ispdlog\\include", "-fexceptions", "-o", "build\\.objs\\avs-project\\windows\\x64\\debug\\src\\AVSManager.cpp.obj", "src\\AVSManager.cpp"],
+  "file": "src\\AVSManager.cpp"
+},
+{
+  "directory": "D:\\project\\avs-project",
+  "arguments": ["gcc.exe", "-c", "-m64", "-g", "-O0", "-Ispdlog\\include", "-fexceptions", "-o", "build\\.objs\\avs-project\\windows\\x64\\debug\\src\\main.cpp.obj", "src\\main.cpp"],
+  "file": "src\\main.cpp"
+},
+{
+  "directory": "D:\\project\\avs-project",
+  "arguments": ["gcc.exe", "-c", "-m64", "-g", "-O0", "-Ispdlog\\include", "-fexceptions", "-o", "build\\.objs\\avs-project\\windows\\x64\\debug\\src\\ThreadManager.cpp.obj", "src\\ThreadManager.cpp"],
+  "file": "src\\ThreadManager.cpp"
+}]
