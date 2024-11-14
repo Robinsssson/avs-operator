@@ -2,8 +2,7 @@
 
 BasedOnStyle: Google  # 基于 Google 的 C++ 风格
 IndentWidth: 4        # 每个缩进级别 4 个空格
-ColumnLimit: 100      # 每行最大字符数限制
-BreakBeforeBraces: Allman  # 在大括号前换行 (Allman 风格)
+ColumnLimit: 180      # 每行最大字符数限制
 
 # 设置空格样式
 SpaceBeforeParens: ControlStatements  # 控制语句的括号前有空格，如 if、while、for
@@ -14,10 +13,9 @@ AllowAllParametersOfDeclarationOnNextLine: false # 函数声明的参数不换�
 BinPackArguments: false                    # 不将函数参数合并在一行
 
 # 继承方式
-PointerAlignment: Left  # 指针符号 `*` 放在类型的左侧，例如：`int* ptr`
+PointerAlignment: Right  # 指针符号 `*` 放在类型的左侧，例如：`int* ptr`
 
 # 设置类成员变量的排列方式
-AlignConsecutiveDeclarations: true  # 对齐连续声明的变量
 AlignTrailingComments: true          # 对齐尾随注释
 
 # 类成员函数的定义

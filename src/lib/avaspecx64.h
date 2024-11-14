@@ -12,6 +12,9 @@ extern "C" {
 /**********************************************/
 /*******************_MARCO_********************/
 /**********************************************/
+#define AVS_ENABLE 1
+#define AVS_DISABLE 0
+
 #define ERR_SUCCESS 0
 #define ERR_INVALID_PARAMETER -1
 #define ERR_OPERATION_NOT_SUPPORTED -2
@@ -56,7 +59,7 @@ extern "C" {
 #define ERR_SL_STARTPIXEL_NOT_IN_RANGE -141
 #define ERR_SL_ENDPIXEL_NOT_IN_RANGE -142
 #define ERR_SL_STARTPIX_GT_ENDPIX -143
-#define ERR_SL_MFACTOR_OUT_OF_RANGE -144
+#define ERR_SL_MFACTOR_OUT_OF_RANGE -144    
 
 /**********************************************/
 /********************Typing********************/

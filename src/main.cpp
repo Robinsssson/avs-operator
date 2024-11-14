@@ -1,60 +1,60 @@
-#include "AVSManager.h"
+#include <windows.h>
+
+#include <argparse/argparse.hpp>
+#include <atomic>
+#include <chrono>
+#include <fstream>
+#include <ios>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <thread>
-#include <atomic>
-#include <windows.h>
-#include <chrono>
+#include <vector>
+
+#include "AVSManager.h"
+#include "spdlog/spdlog.h"
+#include <spdlog/sinks/basic_file_sink.h>
 
 std::atomic<bool> running_flag(true), exit_thread_flag(false);
-
-void get_avs_data() {
-    // connect
-    int i = 0;
-    std::cout << "Thread ID: " << std::this_thread::get_id() << " is running\r\n";
-    while(!exit_thread_flag) {
-        while(running_flag) {
-            std::cout << "Data: " << i++ << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(1));  // 每秒输出一次数据
+static const std::string versionOfAvsOperator = "1.0.0";
+std::shared_ptr<spdlog::logger> file_logger;
+int main(int argc, const char *argv[]) {
+    argparse::ArgumentParser program("avs-operator",versionOfAvsOperator);
+    
+    program.add_argument("-o", "--output").help("set the output file path").default_value(std::string("output_file.txt"));
+    program.add_argument("-g", "--logging").help("set the logging file path").default_value(std::string("None"));
+    std::string outputFile, loggingFile;
+    try {
+        program.parse_args(argc, argv);
+        // if (program["version"] == true) {
+        //     std::cout << "Version " << versionOfAvsOperator << std::endl;
+        // }
+        outputFile = program.get<std::string>("output");
+        loggingFile = program.get<std::string>("logging");
+        if (loggingFile != "None" )
+        {
+            file_logger = spdlog::basic_logger_mt("logger", loggingFile);
+            spdlog::set_default_logger(file_logger);
         }
+        spdlog::info("the output file of log is in {}", outputFile);
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
     }
-    std::cout << "Thread ID: " << std::this_thread::get_id() << " is exit\r\n";
-}
 
-void listen_user_input_flag() {
-    auto __id = std::this_thread::get_id();
-    std::cout << "Thread ID: " << __id << " is running\r\n"; 
-    std::string input;
-    while(!exit_thread_flag) {
-        std::getline(std::cin, input);
-        std::cout << "Get Str is " << input << std::endl;
-        if (input == "exit") {
-            exit_thread_flag = true;
-            running_flag = false;
-        }
-        if (input == "stop") {
-            running_flag = false;
-        }
-        if (input == "run") {
-            running_flag = true;
-        }
+    AVSManager manage;
+    auto ret = manage.findDevice();
+    manage.activateDevice(ret - 1);
+    manage.measurePerpare(ret - 1);
+    auto ret_val = manage.measureData(ret - 1);
+    std::fstream file(outputFile, std::ios_base::out | std::ios_base::trunc);
+    if (!file.is_open()) {
+        spdlog::error("message:error to open log file. function {}, line {}", __FUNCTION__, __LINE__);
+        return -1;
     }
-    std::cout << "Thread ID: " << __id << " is exit\r\n"; 
-}
-
-
-int main(int argc, char** argv)
-{
-    char version_info[1000];
-    int result = AVS_Init(0); // 使用导入的函数
-    AVS_GetDLLVersion(version_info);
-    std::cout << version_info << std::endl;
-
-    std::thread thread_of_avs(get_avs_data);
-    std::thread thread_of_listen(listen_user_input_flag);
-
-    thread_of_listen.join();
-    thread_of_avs.join();
-
+    for (auto &v : ret_val) {
+        file << v << std::endl;
+    }
+    file.close();
     return 0;
 }
