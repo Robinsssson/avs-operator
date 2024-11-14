@@ -5,7 +5,6 @@
 #include <memory>
 #include <thread>
 #include <vector>
-
 class ThreadManager
 {
    public:
