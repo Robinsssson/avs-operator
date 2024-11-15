@@ -7,10 +7,13 @@
 #include <cmath>
 #include <ctime>
 #include <exception>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <ios>
 #include <memory>
 #include <numeric>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -18,7 +21,7 @@
 #include "Utility.h"
 #include "lib/avaspecx64.h"
 
-AVSManager::AVSManager(int port) {
+AVSManager::AVSManager(int port, int waveBegin, int waveEnding, std::string siteName): waveBegin_(waveBegin), waveEnding_(waveEnding), siteName_(siteName) {
     AVS_Init(port);  // use usb port
     char tmp[20];
     AVS_GetDLLVersion(tmp);
@@ -65,8 +68,10 @@ int AVSManager::activateDevice(int number) {
     return 0;
 }
 void measureHookFunction(AvsHandle *handle, int *val) { spdlog::debug("the handle of measure device is {}, the val is {}", *handle, *val); }
-int AVSManager::measurePerpare(int numberID, double intergralTime, int averagesNum) {
+time_t AVSManager::measurePerpare(int numberID, double intergralTime, int averagesNum) {
     MeasConfigType measConfigure;
+    this->intergralTime_ = intergralTime;
+    this->averagesNum_ = averagesNum;
     measConfigure.m_StartPixel = 0;
     measConfigure.m_StopPixel = this->numPixelsOfDevice_ - 1;
     measConfigure.m_IntegrationTime = intergralTime;  // 积分时间
@@ -90,12 +95,13 @@ int AVSManager::measurePerpare(int numberID, double intergralTime, int averagesN
         errorCode = AVS_PrepareMeasure(this->activatedDeviceListMap_.at(numberID), &measConfigure);
     } catch (const std::out_of_range &e) {
         spdlog::error("mssage: DEVICE {} is not ACTIVATE occupid. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
-        return -1;
+        return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
     errorCode = AVS_MeasureCallback(this->activatedDeviceListMap_.at(numberID), measureHookFunction, 1);
     if (LOG_ERROR(errorCode)) return errorCode;
+    auto timeValue = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     spdlog::info("Perpare of Meassage has done");
-    return 0;
+    return timeValue;
 }
 #define AVS_POLLSCAN_NO_DATA_AVAILABLE 0
 std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberID) {
@@ -112,28 +118,84 @@ std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberI
         if (LOG_ERROR(errorCode)) return {};
         errorCode = AVS_GetScopeData(this->activatedDeviceListMap_.at(numberID), &timeLabel, arrayOfSpectrum.data());
         if (LOG_ERROR(errorCode)) return {};
-        auto now = std::chrono::system_clock::now();
+        auto timeVal = std::chrono::system_clock::now();
 
-        return std::tuple(arrayOfSpectrum, std::chrono::system_clock::to_time_t(now));
+        return std::tuple(arrayOfSpectrum, std::chrono::system_clock::to_time_t(timeVal));
     } catch (const std::out_of_range &e) {
         spdlog::error("DEVICE {} not activate. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
         return {};
     }
 }
 
-int AVSManager::saveDataInFile(std::string filePath, std::vector<double> data, time_t time) {
-    std::fstream fileStream(filePath, std::ios_base::app | std::ios_base::out);
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <filesystem>
+#include <ctime>
+#include <vector>
+#include <spdlog/spdlog.h>
+
+int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT, time_t outputTimeT) {
+    char buffer[8];
+    
+    // 获取 inputTime 和 outputTime 的本地时间
+    struct tm inputTime = *localtime(&inputTimeT);  // 深拷贝 inputTime
+    struct tm outputTime = *localtime(&outputTimeT); // 深拷贝 outputTime
+    
+    // 格式化 inputTime 到 buffer
+    std::strftime(buffer, sizeof(buffer), "%H%M%S", &inputTime);
+    
+    // 获取经纬度信息
+    this->getLonAndLat();
+    
+    // 构造文件名
+    std::filesystem::path fileName = std::string(buffer) + ".std";
+    fileName = filePath / fileName;
+    
+    spdlog::info("{} file has been created", fileName.filename().string());
+    std::fstream fileStream(fileName, std::ios_base::trunc | std::ios_base::out);
+    
+    // 检查文件是否成功打开
     if (!fileStream.is_open()) {
         spdlog::error("message:error to open log file. function {}, line {}", __FUNCTION__, __LINE__);
         return -1;
     }
+    
+    // 写入文件内容
+    fileStream << "zenith DOAS" << std::endl;
+    fileStream << "1" << std::endl;
+    fileStream << this->numPixelsOfDevice_ << std::endl;
+    
+    // 写入数据
     for (auto &v : data) {
-        fileStream << v << ' ';
+        fileStream << std::fixed << std::setprecision(4) << v << std::endl;
     }
-    fileStream << std::put_time(std::localtime(&time), "%F %T") << std::endl;
+    
+    // 写入文件名
+    fileStream << fileName.filename().string() << std::endl;
+    fileStream << "OceanOptics" << std::endl;
+    fileStream << "HR2000+" << std::endl;
+    
+    // 格式化并写入时间
+    fileStream << std::put_time(&inputTime, "%Y.%m.%d") << std::endl;
+    fileStream << std::put_time(&inputTime, "%H:%M:%S") << std::endl;
+    fileStream << std::put_time(&outputTime, "%H:%M:%S") << std::endl;
+    
+    // 其他信息
+    fileStream << this->waveBegin_ << std::endl;
+    fileStream << this->waveEnding_ << std::endl;
+    fileStream << "SCANS " << this->averagesNum_ << std::endl;
+    fileStream << "INT_TIME " << this->intergralTime_ << std::endl;
+    fileStream << "SITE " << this->siteName_ << std::endl;
+    fileStream << "LONGITUDE " << std::fixed << std::setprecision(8) << longitude_ << std::endl;
+    fileStream << "LATITUDE " << std::fixed << std::setprecision(8) << latitude_ << std::endl;
+    
+    // 关闭文件
     fileStream.close();
     return 0;
 }
+
+
 static bool isApproximatelyEqual(double a, double b, double epsilon = 1e-9) { return std::abs(a - b) < epsilon; }
 
 int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSManager::AdjustMethod method) {
@@ -158,4 +220,10 @@ int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSMana
             break;
     }
     return int(adjustValue);
+}
+
+int AVSManager::getLonAndLat() {
+    this->longitude_ = 116.81764367;
+    this->latitude_ = 34.00224967;
+    return 0;
 }
