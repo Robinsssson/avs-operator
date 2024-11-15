@@ -2,9 +2,17 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <ctime>
 #include <exception>
+#include <fstream>
+#include <ios>
 #include <memory>
+#include <numeric>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "Utility.h"
@@ -33,7 +41,7 @@ int AVSManager::findDevice() {
 
 AVSManager::~AVSManager() {
     AVS_Done();
-    delete[] this->lambdaArrayOfDevice_;
+    if (this->lambdaArrayOfDevice_ != nullptr) delete[] this->lambdaArrayOfDevice_;
 }
 
 int AVSManager::activateDevice(int number) {
@@ -90,25 +98,64 @@ int AVSManager::measurePerpare(int numberID, double intergralTime, int averagesN
     return 0;
 }
 #define AVS_POLLSCAN_NO_DATA_AVAILABLE 0
-std::vector<double> AVSManager::measureData(int numberID) {
+std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberID) {
     int errorCode;
     try {
         do {
             errorCode = AVS_PollScan(this->activatedDeviceListMap_.at(numberID));
         } while (errorCode == AVS_POLLSCAN_NO_DATA_AVAILABLE);
         if (LOG_ERROR(errorCode)) return {};
-
         unsigned int timeLabel;
         std::vector<double> arrayOfSpectrum(this->numPixelsOfDevice_);
-
         // 获取数据并存储到 vector 中
-        errorCode = AVS_GetScopeData(this->activatedDeviceListMap_.at(numberID), &timeLabel, arrayOfSpectrum.data());
-
+        errorCode = AVS_StopMeasure(this->activatedDeviceListMap_.at(numberID));
         if (LOG_ERROR(errorCode)) return {};
+        errorCode = AVS_GetScopeData(this->activatedDeviceListMap_.at(numberID), &timeLabel, arrayOfSpectrum.data());
+        if (LOG_ERROR(errorCode)) return {};
+        auto now = std::chrono::system_clock::now();
 
-        return arrayOfSpectrum;
+        return std::tuple(arrayOfSpectrum, std::chrono::system_clock::to_time_t(now));
     } catch (const std::out_of_range &e) {
         spdlog::error("DEVICE {} not activate. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
         return {};
     }
+}
+
+int AVSManager::saveDataInFile(std::string filePath, std::vector<double> data, time_t time) {
+    std::fstream fileStream(filePath, std::ios_base::app | std::ios_base::out);
+    if (!fileStream.is_open()) {
+        spdlog::error("message:error to open log file. function {}, line {}", __FUNCTION__, __LINE__);
+        return -1;
+    }
+    for (auto &v : data) {
+        fileStream << v << ' ';
+    }
+    fileStream << std::put_time(std::localtime(&time), "%F %T") << std::endl;
+    fileStream.close();
+    return 0;
+}
+static bool isApproximatelyEqual(double a, double b, double epsilon = 1e-9) { return std::abs(a - b) < epsilon; }
+
+int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSManager::AdjustMethod method) {
+    double adjustValue;
+    double summ = std::accumulate(data.begin(), data.end(), 0.0);
+    double maxi = *std::max_element(data.begin(), data.end());
+    switch (method) {
+        case AdjustMethod::average:
+            if (isApproximatelyEqual(angle, 90)) {
+                adjustValue = 3620400.61632 * std::exp(-(summ / 2048) / 91.29643) + 86.36638 * std::exp(-(summ / 2048) / 753.67786) +
+                              1033.08165 * std::exp(-(summ / 2048) / 753.53241) + 39.21313;
+            } else {
+                adjustValue = 62854.56078 * std::exp(-(summ / this->numPixelsOfDevice_) / 142.29071) + 6781470000.0 * std::exp(-(summ / this->numPixelsOfDevice_) / 40.54059) +
+                              824.25339 * std::exp(-(summ / this->numPixelsOfDevice_) / 636.74826) + 39.99177;
+            }
+            break;
+        case AdjustMethod::maximum:
+            adjustValue = 1759198.71151 * std::exp(-maxi / 116.34418) + 3681.8905 * std::exp(-maxi / 445.74025) + 218.68263 * std::exp(-maxi / 2556.71114) + 14.01163;
+            if (isApproximatelyEqual(angle, 90)) {
+                adjustValue = 0.6534 * adjustValue - 1.45531;
+            }
+            break;
+    }
+    return int(adjustValue);
 }
