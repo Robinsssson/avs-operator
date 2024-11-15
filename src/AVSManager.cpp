@@ -16,6 +16,7 @@
 #include <ostream>
 #include <string>
 #include <tuple>
+
 #include <vector>
 
 #include "Utility.h"
@@ -221,7 +222,28 @@ int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSMana
     }
     return int(adjustValue);
 }
+#define AVS_POLLSCAN_NO_DATA_AVAILABLE 0
+std::vector<double> AVSManager::measureData(int numberID) {
+    int errorCode;
+    try {
+        do {
+            errorCode = AVS_PollScan(this->activatedDeviceListMap_.at(numberID));
+        } while (errorCode == AVS_POLLSCAN_NO_DATA_AVAILABLE);
+        if (LOG_ERROR(errorCode)) return {};
+        unsigned int timeLabel;
+        std::vector<double> arrayOfSpectrum(this->numPixelsOfDevice_);
 
+        // 获取数据并存储到 vector 中
+        errorCode = AVS_GetScopeData(this->activatedDeviceListMap_.at(numberID), &timeLabel, arrayOfSpectrum.data());
+
+        if (LOG_ERROR(errorCode)) return {};
+
+        return arrayOfSpectrum;
+    } catch (const std::out_of_range &e) {
+        spdlog::error("DEVICE {} not activate. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
+        return {};
+    }
+}
 int AVSManager::getLonAndLat() {
     this->longitude_ = 116.81764367;
     this->latitude_ = 34.00224967;
