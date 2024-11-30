@@ -32,37 +32,43 @@ int main(int argc, const char *argv[]) {
         .default_value(std::string("."))
         .metavar("file_path")
         .help("set the output file path");
+
     program.add_argument("-g", "--logging")
         .default_value(std::string("None"))
         .metavar("logging_file_path")
         .help("set the logging file path");
+
     program.add_argument("-t", "--measuretime")
         .default_value(int(1))
         .metavar("number")
-        .action([](const std::string &value) { return std::stoi(value); })
-        .help("set the measure times");
+        .help("set the measure times")
+        .action([](const std::string &value) { return std::stoi(value); });
+
     program.add_argument("-i", "--intergraltime")
         .default_value(int(5))
         .metavar("number")
-        .action([](const std::string &value) { return std::stoi(value); })
-        .help("set the intergral times");
+        .help("set the intergral times")
+        .action([](const std::string &value) { return std::stoi(value); });
+
     program.add_argument("-n", "--intergralnumber")
         .default_value(int(50))
         .metavar("number")
-        .action([](const std::string &value) { return std::stoi(value); })
-        .help("set the intergral number");
+        .help("set the intergral number")
+        .action([](const std::string &value) { return std::stoi(value); });
+
     program.add_argument("-a", "--angle")
         .default_value(int(90))
         .metavar("number")
-        .action([](const std::string &value) { return std::stoi(value); })
-        .help("angle setting");
+        .help("angle setting")
+        .action([](const std::string &value) { return std::stoi(value); });
+
     program.add_argument("-m", "--method")
         .default_value(std::string("average"))
         .metavar("average|maximum")
+        .help("set method average, maximum")
         .action([](const std::string &value) {
             return value == "average" ? AVSManager::AdjustMethod::average : AVSManager::AdjustMethod::maximum;
-        })
-        .help("set method average, maximum");
+        });
 
     std::string outputFilePathStr, loggingFile;
     int measureTime, intergralTime, intergralNumber;
