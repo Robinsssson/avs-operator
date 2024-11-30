@@ -33,10 +33,10 @@ int main(int argc, const char *argv[]) {
         .metavar("file_path")
         .help("set the output file path");
 
-    program.add_argument("-g", "--logging")
+    program.add_argument("-g", "--log")
         .default_value(std::string("None"))
-        .metavar("logging_file_path")
-        .help("set the logging file path");
+        .metavar("log_file_path")
+        .help("set the log file path");
 
     program.add_argument("-t", "--measuretime")
         .default_value(int(1))
@@ -76,7 +76,7 @@ int main(int argc, const char *argv[]) {
         program.parse_args(argc, argv);
 
         outputFilePathStr = program.get<std::string>("output");
-        loggingFile = program.get<std::string>("logging");
+        loggingFile = program.get<std::string>("log");
         measureTime = program.get<int>("measuretime");
         intergralTime = program.get<int>("intergraltime");
         intergralNumber = program.get<int>("intergralnumber");
