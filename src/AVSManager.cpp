@@ -21,7 +21,8 @@
 #include "Utility.h"
 #include "lib/avaspecx64.h"
 
-AVSManager::AVSManager(int port, int waveBegin, int waveEnding, std::string siteName) : waveBegin_(waveBegin), waveEnding_(waveEnding), siteName_(siteName) {
+AVSManager::AVSManager(int port, int waveBegin, int waveEnding, std::string siteName)
+    : waveBegin_(waveBegin), waveEnding_(waveEnding), siteName_(siteName) {
     AVS_Init(port);  // use usb port
     char tmp[20];
     AVS_GetDLLVersion(tmp);
@@ -36,7 +37,8 @@ int AVSManager::findDevice() {
         return -1;
     }
     this->avsIdentityList_ = std::make_unique<AvsIdentityType[]>(numberOfDevices);
-    auto errorCode = AVS_GetList(numberOfDevices * sizeof(AvsIdentityType), &numberOfDevices, this->avsIdentityList_.get());
+    auto errorCode =
+        AVS_GetList(numberOfDevices * sizeof(AvsIdentityType), &numberOfDevices, this->avsIdentityList_.get());
     if (LOG_ERROR(errorCode)) return errorCode;
     spdlog::info("Device of Number is {}", errorCode);
     return errorCode;
@@ -67,7 +69,9 @@ int AVSManager::activateDevice(int number) {
     AVS_GetLambda(deviceHandle, this->lambdaArrayOfDevice_);  // Get \lambda list.
     return 0;
 }
-void measureHookFunction(AvsHandle *handle, int *val) { spdlog::debug("the handle of measure device is {}, the val is {}", *handle, *val); }
+void measureHookFunction(AvsHandle *handle, int *val) {
+    spdlog::debug("the handle of measure device is {}, the val is {}", *handle, *val);
+}
 time_t AVSManager::measurePerpare(int numberID, double intergralTime, int averagesNum) {
     MeasConfigType measConfigure;
     this->intergralTime_ = intergralTime;
@@ -94,7 +98,8 @@ time_t AVSManager::measurePerpare(int numberID, double intergralTime, int averag
     try {
         errorCode = AVS_PrepareMeasure(this->activatedDeviceListMap_.at(numberID), &measConfigure);
     } catch (const std::out_of_range &e) {
-        spdlog::error("mssage: DEVICE {} is not ACTIVATE occupid. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
+        spdlog::error(
+            "mssage: DEVICE {} is not ACTIVATE occupid. FUNCTION {}, LINE {}", numberID, __FUNCTION__, __LINE__);
         return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     }
     errorCode = AVS_MeasureCallback(this->activatedDeviceListMap_.at(numberID), measureHookFunction, 1);
@@ -127,7 +132,8 @@ std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberI
     }
 }
 
-int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT, time_t outputTimeT) {
+int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
+                               time_t outputTimeT) {
     char buffer[8];
 
     // 获取 inputTime 和 outputTime 的本地时间
@@ -196,15 +202,18 @@ int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSMana
     switch (method) {
         case AdjustMethod::average:
             if (isApproximatelyEqual(angle, 90)) {
-                adjustValue = 3620400.61632 * std::exp(-(summ / 2048) / 91.29643) + 86.36638 * std::exp(-(summ / 2048) / 753.67786) +
+                adjustValue = 3620400.61632 * std::exp(-(summ / 2048) / 91.29643) +
+                              86.36638 * std::exp(-(summ / 2048) / 753.67786) +
                               1033.08165 * std::exp(-(summ / 2048) / 753.53241) + 39.21313;
             } else {
-                adjustValue = 62854.56078 * std::exp(-(summ / this->numPixelsOfDevice_) / 142.29071) + 6781470000.0 * std::exp(-(summ / this->numPixelsOfDevice_) / 40.54059) +
+                adjustValue = 62854.56078 * std::exp(-(summ / this->numPixelsOfDevice_) / 142.29071) +
+                              6781470000.0 * std::exp(-(summ / this->numPixelsOfDevice_) / 40.54059) +
                               824.25339 * std::exp(-(summ / this->numPixelsOfDevice_) / 636.74826) + 39.99177;
             }
             break;
         case AdjustMethod::maximum:
-            adjustValue = 1759198.71151 * std::exp(-maxi / 116.34418) + 3681.8905 * std::exp(-maxi / 445.74025) + 218.68263 * std::exp(-maxi / 2556.71114) + 14.01163;
+            adjustValue = 1759198.71151 * std::exp(-maxi / 116.34418) + 3681.8905 * std::exp(-maxi / 445.74025) +
+                          218.68263 * std::exp(-maxi / 2556.71114) + 14.01163;
             if (isApproximatelyEqual(angle, 90)) {
                 adjustValue = 0.6534 * adjustValue - 1.45531;
             }

@@ -4,6 +4,5 @@
 
 #include "ErrorManager.h"
 
-
 #define LOG_ERROR(code) ErrorManager::logError(code, __FILE__, __LINE__, __FUNCTION__)
 #endif

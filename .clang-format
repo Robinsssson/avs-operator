@@ -2,7 +2,7 @@
 
 BasedOnStyle: Google  # 基于 Google 的 C++ 风格
 IndentWidth: 4        # 每个缩进级别 4 个空格
-ColumnLimit: 180      # 每行最大字符数限制
+ColumnLimit: 120      # 每行最大字符数限制
 
 # 设置空格样式
 SpaceBeforeParens: ControlStatements  # 控制语句的括号前有空格，如 if、while、for

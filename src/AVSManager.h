@@ -1,18 +1,17 @@
 #ifndef __AVS_MANAGER_H
 #define __AVS_MANAGER_H
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <filesystem>
+
 #include "lib/avaspecx64.h"
+
 
 class AVSManager final {
    public:
-    enum class AdjustMethod {
-        maximum,
-        average
-    };
+    enum class AdjustMethod { maximum, average };
     explicit AVSManager(int port, int waveBegin, int waveEnding, std::string siteName);
     ~AVSManager();
     AVSManager(AVSManager &) = delete;
@@ -21,9 +20,10 @@ class AVSManager final {
     int findDevice();
     int activateDevice(int numberID);
     time_t measurePerpare(int numberID, double intergralTime = 5, int averagesNum = 1);
-    int saveDataInFile(const std::filesystem::path& filePath, std::vector<double> data, time_t inputTimeT, time_t outputTimeT);
+    int saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
+                       time_t outputTimeT);
     int getActivateID() const { return activatedDeviceID_; }
-    int adjustVal(const std::vector<double> &data, double angle, AdjustMethod method=AdjustMethod::average);
+    int adjustVal(const std::vector<double> &data, double angle, AdjustMethod method = AdjustMethod::average);
     int getLonAndLat();
 
    private:
@@ -37,7 +37,6 @@ class AVSManager final {
     int waveBegin_, waveEnding_;
     std::string siteName_;
     double longitude_, latitude_;
-
 };
 
 #endif  //!__AVS_MANAGER_H
