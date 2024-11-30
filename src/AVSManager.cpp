@@ -227,3 +227,4 @@ int AVSManager::getLonAndLat() {
     this->latitude_ = 34.00224967;
     return 0;
 }
+

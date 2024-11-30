@@ -1,18 +1,22 @@
 #include <spdlog/sinks/basic_file_sink.h>
+
 #include <windows.h>
 
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <chrono>
+
 #include <cstddef>
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
+
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 #include <vector>
+
 
 #include "AVSManager.h"
 #include "spdlog/spdlog.h"
@@ -67,6 +71,7 @@ int main(int argc, const char *argv[]) {
         spdlog::error("plz check avs-line is linked?");
         return -1;
     }
+
     numberID -= 1;
     avsManager->activateDevice(numberID);
     while (measureTime--) {
@@ -91,3 +96,4 @@ void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::pa
     avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData));
     spdlog::info("Save the {} times Measure in PATH {}", ++timeEntry, outputFilePath.string());
 }
+

@@ -25,6 +25,7 @@ class AVSManager final {
     int getActivateID() const { return activatedDeviceID_; }
     int adjustVal(const std::vector<double> &data, double angle, AdjustMethod method=AdjustMethod::average);
     int getLonAndLat();
+
    private:
     std::string versionInfo_;
     std::unique_ptr<AvsIdentityType[]> avsIdentityList_;
@@ -36,6 +37,7 @@ class AVSManager final {
     int waveBegin_, waveEnding_;
     std::string siteName_;
     double longitude_, latitude_;
+
 };
 
 #endif  //!__AVS_MANAGER_H
