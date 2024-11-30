@@ -1,12 +1,9 @@
 #ifndef __BASETHREAD__H__
 #define __BASETHREAD__H__
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <thread>
-#include <vector>
-class ThreadManager
-{
+class ThreadManager {
    public:
     // 构造函数：启动线程
     ThreadManager(std::function<void()> task);
@@ -27,7 +24,7 @@ class ThreadManager
     ThreadManager &operator=(ThreadManager &&other) noexcept;
 
    private:
-    std::function<void()>        task_;    // 存储任务
+    std::function<void()> task_;           // 存储任务
     std::unique_ptr<std::thread> thread_;  // 使用智能指针管理线程
 };
 

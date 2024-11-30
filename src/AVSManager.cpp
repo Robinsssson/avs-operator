@@ -6,11 +6,11 @@
 #include <chrono>
 #include <cmath>
 #include <ctime>
-#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <memory>
 #include <numeric>
 #include <ostream>
@@ -21,7 +21,7 @@
 #include "Utility.h"
 #include "lib/avaspecx64.h"
 
-AVSManager::AVSManager(int port, int waveBegin, int waveEnding, std::string siteName): waveBegin_(waveBegin), waveEnding_(waveEnding), siteName_(siteName) {
+AVSManager::AVSManager(int port, int waveBegin, int waveEnding, std::string siteName) : waveBegin_(waveBegin), waveEnding_(waveEnding), siteName_(siteName) {
     AVS_Init(port);  // use usb port
     char tmp[20];
     AVS_GetDLLVersion(tmp);
@@ -127,60 +127,52 @@ std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberI
     }
 }
 
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-#include <filesystem>
-#include <ctime>
-#include <vector>
-#include <spdlog/spdlog.h>
-
 int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT, time_t outputTimeT) {
     char buffer[8];
-    
+
     // 获取 inputTime 和 outputTime 的本地时间
-    struct tm inputTime = *localtime(&inputTimeT);  // 深拷贝 inputTime
-    struct tm outputTime = *localtime(&outputTimeT); // 深拷贝 outputTime
-    
+    struct tm inputTime = *localtime(&inputTimeT);    // 深拷贝 inputTime
+    struct tm outputTime = *localtime(&outputTimeT);  // 深拷贝 outputTime
+
     // 格式化 inputTime 到 buffer
     std::strftime(buffer, sizeof(buffer), "%H%M%S", &inputTime);
-    
+
     // 获取经纬度信息
     this->getLonAndLat();
-    
+
     // 构造文件名
     std::filesystem::path fileName = std::string(buffer) + ".std";
     fileName = filePath / fileName;
-    
+
     spdlog::info("{} file has been created", fileName.filename().string());
     std::fstream fileStream(fileName, std::ios_base::trunc | std::ios_base::out);
-    
+
     // 检查文件是否成功打开
     if (!fileStream.is_open()) {
         spdlog::error("message:error to open log file. function {}, line {}", __FUNCTION__, __LINE__);
         return -1;
     }
-    
+
     // 写入文件内容
     fileStream << "zenith DOAS" << std::endl;
     fileStream << "1" << std::endl;
     fileStream << this->numPixelsOfDevice_ << std::endl;
-    
+
     // 写入数据
     for (auto &v : data) {
         fileStream << std::fixed << std::setprecision(4) << v << std::endl;
     }
-    
+
     // 写入文件名
     fileStream << fileName.filename().string() << std::endl;
     fileStream << "OceanOptics" << std::endl;
     fileStream << "HR2000+" << std::endl;
-    
+
     // 格式化并写入时间
     fileStream << std::put_time(&inputTime, "%Y.%m.%d") << std::endl;
     fileStream << std::put_time(&inputTime, "%H:%M:%S") << std::endl;
     fileStream << std::put_time(&outputTime, "%H:%M:%S") << std::endl;
-    
+
     // 其他信息
     fileStream << this->waveBegin_ << std::endl;
     fileStream << this->waveEnding_ << std::endl;
@@ -189,12 +181,11 @@ int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vecto
     fileStream << "SITE " << this->siteName_ << std::endl;
     fileStream << "LONGITUDE " << std::fixed << std::setprecision(8) << longitude_ << std::endl;
     fileStream << "LATITUDE " << std::fixed << std::setprecision(8) << latitude_ << std::endl;
-    
+
     // 关闭文件
     fileStream.close();
     return 0;
 }
-
 
 static bool isApproximatelyEqual(double a, double b, double epsilon = 1e-9) { return std::abs(a - b) < epsilon; }
 
@@ -227,4 +218,3 @@ int AVSManager::getLonAndLat() {
     this->latitude_ = 34.00224967;
     return 0;
 }
-

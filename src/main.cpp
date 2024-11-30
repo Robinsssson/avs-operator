@@ -1,25 +1,21 @@
 #include <spdlog/sinks/basic_file_sink.h>
-
 #include <windows.h>
 
 #include <argparse/argparse.hpp>
 #include <atomic>
 #include <chrono>
-
-#include <cstddef>
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
-
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 #include <vector>
 
-
 #include "AVSManager.h"
 #include "spdlog/spdlog.h"
+
 static const std::string versionOfAvsOperator = "1.0.0";
 
 std::atomic<bool> running_flag(true), exit_thread_flag(false);
@@ -96,4 +92,3 @@ void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::pa
     avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData));
     spdlog::info("Save the {} times Measure in PATH {}", ++timeEntry, outputFilePath.string());
 }
-
