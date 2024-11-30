@@ -71,6 +71,7 @@ int main(int argc, const char *argv[]) {
         spdlog::error("plz check avs-line is linked?");
         return -1;
     }
+
     numberID -= 1;
     avsManager->activateDevice(numberID);
     while (measureTime--) {
