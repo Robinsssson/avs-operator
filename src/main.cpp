@@ -15,6 +15,7 @@
 
 #include "AVSManager.h"
 #include "spdlog/spdlog.h"
+#include <fmt/format.h>
 
 static const std::string versionOfAvsOperator = "1.0.0";
 
@@ -35,15 +36,16 @@ int main(int argc, const char *argv[]) {
     program.add_argument("-i", "--intergraltime").help("set the intergral times").default_value(int(5)).action([](const std::string &value) { return std::stoi(value); });
     program.add_argument("-n", "--intergralnumber").help("set the intergral number").default_value(int(50)).action([](const std::string &value) { return std::stoi(value); });
     std::string outputFilePathStr, loggingFile;
-    int measureTime, intergraltime, intergralnumber;
+    int measureTime, intergralTime, intergralNumber;
     try {
         program.parse_args(argc, argv);
 
         outputFilePathStr = program.get<std::string>("output");
         loggingFile = program.get<std::string>("logging");
         measureTime = program.get<int>("measure");
-        intergraltime = program.get<int>("intergraltime");
-        intergralnumber = program.get<int>("intergralnumber");
+        intergralTime = program.get<int>("intergraltime");
+        intergralNumber = program.get<int>("intergralnumber");
+
         if (loggingFile != "None") {
             file_logger = spdlog::basic_logger_mt("logger", loggingFile);
             spdlog::set_default_logger(file_logger);
@@ -71,7 +73,7 @@ int main(int argc, const char *argv[]) {
     numberID -= 1;
     avsManager->activateDevice(numberID);
     while (measureTime--) {
-        timerHookFunction(intergraltime, intergralnumber, outputFilePath);
+        timerHookFunction(intergralTime, intergralNumber, outputFilePath);
     }
     return 0;
 }

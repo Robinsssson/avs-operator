@@ -7,4 +7,6 @@ build/
 
 .vscode/
 .cache/
-compile_commands.json
+*.json
+*.exe
+*.dll
