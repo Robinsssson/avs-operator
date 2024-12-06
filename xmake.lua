@@ -3,7 +3,7 @@ add_rules("plugin.compile_commands.autoupdate", {outputdir = "."})
 add_repositories("local-repo build")
 
 add_requires("spdlog", {configs = {shared = false}})
-add_requires("argparse", "fmt", "cpp-ipc", {configs = {shared = true}})
+add_requires("argparse", "fmt 10.2.1", "cpp-ipc", {configs = {shared = true}})
 
 
 set_license("GPL")

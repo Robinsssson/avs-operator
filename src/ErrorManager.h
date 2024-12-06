@@ -19,7 +19,7 @@ class ErrorManager {
             return "Unknown error code: " + std::to_string(errorCode);
         }
     }
-    static bool logError(int errorCode, const char* file, int line, const char* function) {
+    static bool handleError(int errorCode, const char* file, int line, const char* function) {
         if (errorCode >= 0) return false;
         auto it = errorMap.find(errorCode);
         if (it != errorMap.end()) {

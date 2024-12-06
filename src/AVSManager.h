@@ -37,6 +37,8 @@ class AVSManager final {
     int waveBegin_, waveEnding_;
     std::string siteName_;
     double longitude_, latitude_;
+    int angle_;
+    AdjustMethod method_ = AdjustMethod::average;
 };
 
 #endif  //!__AVS_MANAGER_H

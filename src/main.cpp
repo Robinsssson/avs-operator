@@ -14,6 +14,8 @@
 #include <thread>
 
 #include "AVSManager.h"
+#include "Utility.h"
+#include "fmt/chrono.h"
 
 static const std::string versionOfAvsOperator = "1.0.0";
 
@@ -80,6 +82,7 @@ int main(int argc, const char *argv[]) {
         measureTime = program.get<int>("measuretime");
         intergralTime = program.get<int>("intergraltime");
         intergralNumber = program.get<int>("intergralnumber");
+
         globalAngleOfMotor.store(program.get<int>("angle"), std::memory_order_relaxed);
         globalMethod.store(program.get<AVSManager::AdjustMethod>("method"), std::memory_order_relaxed);
 
@@ -90,15 +93,12 @@ int main(int argc, const char *argv[]) {
 
         spdlog::info("the output file of log is in {}", outputFilePathStr);
     } catch (const std::exception &e) {
-        std::cerr << e.what() << std::endl;
+        fmt::println(std::cerr, e.what());
         return 1;
     }
-    auto nowTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    auto ret = std::put_time(std::localtime(&nowTime), "%Y-%m-%d");
-    std::ostringstream oss;
-    oss << ret;
+    auto dirName = fmt::format("{:%Y-%m-%d}", fmt::localtime(avs_util::getCurrentTimeT()));
     std::filesystem::path outputFilePath(outputFilePathStr);
-    outputFilePath = outputFilePathStr / std::filesystem::path(oss.str());
+    outputFilePath = outputFilePathStr / std::filesystem::path(dirName);
     std::filesystem::create_directories(outputFilePath);
     spdlog::info("entry create {} path", outputFilePath.string());
     avsManager = std::make_unique<AVSManager>(0, 300, 460, std::string("Huai Bei"));
@@ -117,16 +117,22 @@ int main(int argc, const char *argv[]) {
 void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath) {
     static unsigned int timeEntry = 0;
     int tick = timeVal * averageNumber;
-    avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
+
     spdlog::info("Start Adjust Measure");
+
+    avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
     std::this_thread::sleep_for(std::chrono::milliseconds(tick));
     auto adjustData = avsManager->measureData(avsManager->getActivateID());
+
     timeVal = avsManager->adjustVal(std::get<0>(adjustData), globalAngleOfMotor, globalMethod);
+
     spdlog::info("Adjust Intergral-Time to {}", timeVal);
-    time_t inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
     spdlog::info("Start Right Measure");
+
+    time_t inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
     std::this_thread::sleep_for(std::chrono::milliseconds(tick));
     auto retData = avsManager->measureData(avsManager->getActivateID());
     avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData));
+
     spdlog::info("Save the {} times Measure in PATH {}", ++timeEntry, outputFilePath.string());
 }
