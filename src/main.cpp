@@ -7,7 +7,6 @@
 #include <chrono>
 #include <ctime>
 #include <filesystem>
-#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -93,6 +92,7 @@ int main(int argc, const char *argv[]) {
 
         spdlog::info("the output file of log is in {}", outputFilePathStr);
     } catch (const std::exception &e) {
+
         fmt::println(std::cerr, e.what());
         return 1;
     }
