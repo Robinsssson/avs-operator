@@ -1,5 +1,7 @@
 # avs-operator
 
+avs光谱仪上位机程序
+
 ## USAGE
 
 function of the avs-operator argparse
