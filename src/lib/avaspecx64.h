@@ -271,10 +271,14 @@ typedef struct {
 /*******************Function*******************/
 /**********************************************/
 
-#ifndef EXPORTS
-#define AVS_SPECX64_API __declspec (dllexport)
+#ifdef _MSC_VER
+    #ifndef EXPORTS
+        #define AVS_SPECX64_API __declspec(dllexport)
+    #else
+        #define AVS_SPECX64_API __declspec(dllimport)
+    #endif
 #else
-#define AVS_SPECX64_API __declspec (dllimport)
+    #define AVS_SPECX64_API
 #endif
 
 AVS_SPECX64_API int __stdcall AVS_Init(short a_Port);
