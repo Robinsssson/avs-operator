@@ -45,6 +45,7 @@ Optional arguments:
 任意文件夹/
     avs-operator.exe
     avaspecx64.dll
+    fmt.dll
 ```
 右击文件夹空白处，点击任意命令行程序`powershell.exe`或者`cmd.exe`。运行如下命令行
 ```
