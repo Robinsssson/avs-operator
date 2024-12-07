@@ -150,7 +150,7 @@ int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vecto
     // 构造文件名，确保格式化中不包含非法字符
     auto inputTime = fmt::localtime(inputTimeT);
     std::filesystem::path saveFilePath =
-        filePath / fmt::format("{0}{1:03d}{2:%H-%M-%S}.std", this->angle_ == 90 ? 'L' : 'S', this->angle_, inputTime);
+        filePath / fmt::format("{0}{1:03d}{2:%H%M%S}.std", this->angle_ == 90 ? 'L' : 'S', this->angle_, inputTime);
     const auto saveFileName = saveFilePath.filename().string();
 
     spdlog::info("{} file has been created", saveFileName);
@@ -185,7 +185,7 @@ int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vecto
     fileStream << saveFileName << '\n'
                << "OceanOptics\n"
                << "HR2000+\n"
-               << fmt::format("{:%Y.%m.%d}\n", inputTime) << fmt::format("{:%H:%M:%S}\n", inputTime)
+               << fmt::format("{:%d.%m.%Y}\n", inputTime) << fmt::format("{:%H:%M:%S}\n", inputTime)
                << fmt::format("{:%H:%M:%S}\n", fmt::localtime(outputTimeT))
                << fmt::format("{}\n{}\n", this->waveBegin_, this->waveEnding_)
                << fmt::format("SCANS {}\n", this->averagesNum_) << fmt::format("INT_TIME {}\n", this->integralTime_)
