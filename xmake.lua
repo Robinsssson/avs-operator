@@ -1,8 +1,8 @@
 add_rules("mode.debug", "mode.release")
 add_rules("plugin.compile_commands.autoupdate", {outputdir = "."})
-add_repositories("local-repo build")
 
-add_requires("spdlog", {configs = {shared = false}})
+set_toolchains("msvc")
+add_requires("spdlog 1.14.1", {configs = {shared = false}})
 add_requires("argparse", "fmt 10.2.1", "cpp-ipc", {configs = {shared = true}})
 
 
@@ -15,6 +15,5 @@ target("avs-operator")
     add_linkdirs("src/lib")
     add_links("avaspecx64")
     
-    set_toolchains("msvc")
     add_cxflags("/utf-8", "/wd4819")
     add_packages("argparse", "spdlog", "fmt", "cpp-ipc")
