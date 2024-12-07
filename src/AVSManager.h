@@ -19,7 +19,7 @@ class AVSManager final {
     std::tuple<std::vector<double>, std::time_t> measureData(int numberID);
     int findDevice();
     int activateDevice(int numberID);
-    time_t measurePerpare(int numberID, double intergralTime = 5, int averagesNum = 1);
+    time_t measurePerpare(int numberID, double integralTime = 5, int averagesNum = 1);
     int saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
                        time_t outputTimeT);
     int getActivateID() const { return activatedDeviceID_; }
@@ -33,7 +33,7 @@ class AVSManager final {
     double *lambdaArrayOfDevice_ = nullptr;
     int activatedDeviceID_ = -1;
     std::map<int, AvsHandle> activatedDeviceListMap_;
-    int intergralTime_, averagesNum_;
+    int integralTime_, averagesNum_;
     int waveBegin_, waveEnding_;
     std::string siteName_;
     double longitude_, latitude_;

@@ -18,11 +18,11 @@
 #include "fmt/chrono.h"
 #include "lib/avaspecx64.h"
 
-static MeasConfigType initMeasConfig(int numPixels, double intergralTime, int averagesNum) {
+static MeasConfigType initMeasConfig(int numPixels, double integralTime, int averagesNum) {
     MeasConfigType measConfigure;
     measConfigure.m_StartPixel = 0;
     measConfigure.m_StopPixel = numPixels - 1;
-    measConfigure.m_IntegrationTime = intergralTime;  // 积分时间
+    measConfigure.m_IntegrationTime = integralTime;  // 积分时间
     measConfigure.m_IntegrationDelay = 0;
     measConfigure.m_NrAverages = averagesNum;  // 单次测量的平均值个数
     measConfigure.m_CorDynDark.m_Enable = 0;
@@ -97,11 +97,11 @@ void measureHookFunction(AvsHandle *handle, int *val) {
     spdlog::debug("the handle of measure device is {}, the val is {}", *handle, *val);
 }
 
-time_t AVSManager::measurePerpare(int numberID, double intergralTime, int averagesNum) {
-    this->intergralTime_ = intergralTime;
+time_t AVSManager::measurePerpare(int numberID, double integralTime, int averagesNum) {
+    this->integralTime_ = integralTime;
     this->averagesNum_ = averagesNum;
 
-    MeasConfigType measConfigure = initMeasConfig(this->numPixelsOfDevice_, intergralTime, averagesNum);
+    MeasConfigType measConfigure = initMeasConfig(this->numPixelsOfDevice_, integralTime, averagesNum);
 
     int errorCode;
     try {
@@ -188,7 +188,7 @@ int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vecto
                << fmt::format("{:%Y.%m.%d}\n", inputTime) << fmt::format("{:%H:%M:%S}\n", inputTime)
                << fmt::format("{:%H:%M:%S}\n", fmt::localtime(outputTimeT))
                << fmt::format("{}\n{}\n", this->waveBegin_, this->waveEnding_)
-               << fmt::format("SCANS {}\n", this->averagesNum_) << fmt::format("INT_TIME {}\n", this->intergralTime_)
+               << fmt::format("SCANS {}\n", this->averagesNum_) << fmt::format("INT_TIME {}\n", this->integralTime_)
                << fmt::format("SITE {}\n", this->siteName_) << fmt::format("LONGITUDE {:.8f}\n", longitude_)
                << fmt::format("LATITUDE {:.8f}\n", latitude_);
 

@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <typeinfo>
 
 #include "AVSManager.h"
 #include "Utility.h"
@@ -40,62 +41,99 @@ int main(int argc, const char *argv[]) {
         .help("set the log file path");
 
     program.add_argument("-t", "--measuretime")
-        .default_value(int(1))
+        .default_value(1)
         .metavar("number")
         .help("set the measure times")
-        .action([](const std::string &value) { return std::stoi(value); });
+        .scan<'i', int>();
 
-    program.add_argument("-i", "--intergraltime")
-        .default_value(int(5))
+    program.add_argument("-i", "--integraltime")
+        .default_value(5)
         .metavar("number")
-        .help("set the intergral times")
-        .action([](const std::string &value) { return std::stoi(value); });
+        .help("set the integral times")
+        .scan<'i', int>();
 
-    program.add_argument("-n", "--intergralnumber")
-        .default_value(int(50))
+    program.add_argument("-n", "--integralnumber")
+        .default_value(50)
         .metavar("number")
-        .help("set the intergral number")
-        .action([](const std::string &value) { return std::stoi(value); });
+        .help("set the integral number")
+        .scan<'i', int>();
 
     program.add_argument("-a", "--angle")
-        .default_value(int(90))
+        .default_value(90)
         .metavar("number")
-        .help("angle setting")
-        .action([](const std::string &value) { return std::stoi(value); });
+        .help("angle setting for this")
+        .scan<'i', int>();
 
     program.add_argument("-m", "--method")
         .default_value(std::string("average"))
-        .metavar("average|maximum")
-        .help("set method average, maximum")
-        .action([](const std::string &value) {
-            return value == "average" ? AVSManager::AdjustMethod::average : AVSManager::AdjustMethod::maximum;
-        });
+        .metavar("'average'|'maximum'")
+        .help("set method average or maximum");
 
     std::string outputFilePathStr, loggingFile;
-    int measureTime, intergralTime, intergralNumber;
+    int measureTime, integralTime, integralNumber;
     try {
         program.parse_args(argc, argv);
-
-        outputFilePathStr = program.get<std::string>("output");
-        loggingFile = program.get<std::string>("log");
-        measureTime = program.get<int>("measuretime");
-        intergralTime = program.get<int>("intergraltime");
-        intergralNumber = program.get<int>("intergralnumber");
-
-        globalAngleOfMotor.store(program.get<int>("angle"), std::memory_order_relaxed);
-        globalMethod.store(program.get<AVSManager::AdjustMethod>("method"), std::memory_order_relaxed);
-
-        if (loggingFile != "None") {
-            file_logger = spdlog::basic_logger_mt("logger", loggingFile);
-            spdlog::set_default_logger(file_logger);
-        }
-
-        spdlog::info("the output file of log is in {}", outputFilePathStr);
     } catch (const std::exception &e) {
-
         fmt::println(std::cerr, e.what());
         return 1;
     }
+    try {
+        outputFilePathStr = program.get<std::string>("output");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 2;
+    }
+    try {
+        loggingFile = program.get<std::string>("log");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 3;
+    }
+    try {
+        measureTime = program.get<int>("measuretime");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 4;
+    }
+    try {
+        integralTime = program.get<int>("integraltime");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 5;
+    }
+    try {
+        integralNumber = program.get<int>("integralnumber");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 6;
+    }
+    try {
+        globalAngleOfMotor.store(program.get<int>("angle"), std::memory_order_relaxed);
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 7;
+    }
+    try {
+        std::string method_str = program.get<std::string>("method");
+        AVSManager::AdjustMethod method;
+        if (method_str == "average")
+            method = AVSManager::AdjustMethod::average;
+        else if (method_str == "maximum")
+            method = AVSManager::AdjustMethod::maximum;
+        else
+            throw std::bad_cast();
+        globalMethod.store(method, std::memory_order_relaxed);
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 8;
+    }
+
+    if (loggingFile != "None") {
+        file_logger = spdlog::basic_logger_mt("logger", loggingFile);
+        spdlog::set_default_logger(file_logger);
+    }
+
+    spdlog::info("the output file of log is in {}", outputFilePathStr);
     auto dirName = fmt::format("{:%Y-%m-%d}", fmt::localtime(avs_util::getCurrentTimeT()));
     std::filesystem::path outputFilePath(outputFilePathStr);
     outputFilePath = outputFilePathStr / std::filesystem::path(dirName);
@@ -109,7 +147,7 @@ int main(int argc, const char *argv[]) {
     }
     avsManager->activateDevice(numberID);
     while (measureTime--) {
-        timerHookFunction(intergralTime, intergralNumber, outputFilePath);
+        timerHookFunction(integralTime, integralNumber, outputFilePath);
     }
     return 0;
 }
@@ -126,7 +164,7 @@ void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::pa
 
     timeVal = avsManager->adjustVal(std::get<0>(adjustData), globalAngleOfMotor, globalMethod);
 
-    spdlog::info("Adjust Intergral-Time to {}", timeVal);
+    spdlog::info("Adjust integral-Time to {}", timeVal);
     spdlog::info("Start Right Measure");
 
     time_t inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
