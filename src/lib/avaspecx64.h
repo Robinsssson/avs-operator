@@ -271,7 +271,7 @@ typedef struct {
 /*******************Function*******************/
 /**********************************************/
 
-#ifdef _MSC_VER
+#ifdef _WIN32
     #ifndef EXPORTS
         #define AVS_SPECX64_API __declspec(dllexport)
     #else
