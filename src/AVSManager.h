@@ -21,10 +21,10 @@ class AVSManager final {
     int activateDevice(int numberID);
     time_t measurePerpare(int numberID, double integralTime = 5, int averagesNum = 1);
     int saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
-                       time_t outputTimeT);
+                       time_t outputTimeT, std::string portCom);
     int getActivateID() const { return activatedDeviceID_; }
     int adjustVal(const std::vector<double> &data, double angle, AdjustMethod method = AdjustMethod::average);
-    int getLonAndLat();
+    int getLonAndLat(std::string portCom);
 
    private:
     std::string versionInfo_;
@@ -36,7 +36,7 @@ class AVSManager final {
     int integralTime_, averagesNum_;
     int waveBegin_, waveEnding_;
     std::string siteName_;
-    double longitude_, latitude_;
+    std::string longitude_, latitude_;
     int angle_;
     AdjustMethod method_ = AdjustMethod::average;
 };

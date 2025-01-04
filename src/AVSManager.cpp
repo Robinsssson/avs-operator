@@ -1,5 +1,6 @@
 #include "AVSManager.h"
 
+#include <serial/serial.h>
 #include <spdlog/spdlog.h>
 #include <time.h>
 
@@ -17,6 +18,7 @@
 #include "Utility.h"
 #include "fmt/chrono.h"
 #include "lib/avaspecx64.h"
+
 
 static MeasConfigType initMeasConfig(int numPixels, double integralTime, int averagesNum) {
     MeasConfigType measConfigure;
@@ -143,9 +145,9 @@ std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberI
 }
 
 int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
-                               time_t outputTimeT) {
+                               time_t outputTimeT, std::string portCom) {
     // 获取经纬度信息
-    this->getLonAndLat();
+    this->getLonAndLat(portCom);
 
     // 构造文件名，确保格式化中不包含非法字符
     auto inputTime = fmt::localtime(inputTimeT);
@@ -189,8 +191,8 @@ int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vecto
                << fmt::format("{:%H:%M:%S}\n", fmt::localtime(outputTimeT))
                << fmt::format("{}\n{}\n", this->waveBegin_, this->waveEnding_)
                << fmt::format("SCANS {}\n", this->averagesNum_) << fmt::format("INT_TIME {}\n", this->integralTime_)
-               << fmt::format("SITE {}\n", this->siteName_) << fmt::format("LONGITUDE {:.8f}\n", longitude_)
-               << fmt::format("LATITUDE {:.8f}\n", latitude_);
+               << fmt::format("SITE {}\n", this->siteName_) << fmt::format("LONGITUDE {}\n", longitude_)
+               << fmt::format("LATITUDE {}\n", latitude_);
 
     if (!fileStream) {
         spdlog::error("Error finalizing file {}", saveFileName);
@@ -231,8 +233,81 @@ int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSMana
     return int(adjustValue);
 }
 
-int AVSManager::getLonAndLat() {
-    this->longitude_ = 116.81764367;
-    this->latitude_ = 34.00224967;
+static std::vector<std::string> split(const std::string& str, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(str);
+    while (std::getline(tokenStream, token, delimiter)) {
+        tokens.push_back(token);
+    }
+    return tokens;
+}
+
+static bool extractLatLong(const std::string& gnrmc, std::string& latitude, std::string& longitude) {
+    // 检查是否以 $GNRMC 开头
+    if (gnrmc.find("$GNRMC") == std::string::npos) {
+        return false;
+    }
+
+    // 分割字符串
+    std::vector<std::string> tokens = split(gnrmc, ',');
+    if (tokens.size() < 6) {
+        return false; // 数据格式不正确
+    }
+
+    // 提取纬度和经度
+    latitude = tokens[3];  // 纬度
+    longitude = tokens[5]; // 经度
+
+    return true;
+}
+static std::string moveDecimalTwoPlaces(std::string str) {
+    size_t decimalPos = str.find('.'); // 找到小数点的位置
+
+    if (decimalPos == std::string::npos) {
+        // 如果没有小数点，直接在末尾添加 ".00"
+        return str + ".00";
+    }
+
+    if (decimalPos < 2) {
+        // 如果小数点前面不足两位，在前面补零
+        str.insert(0, 2 - decimalPos, '0');
+        decimalPos = str.find('.'); // 更新小数点的位置
+    }
+
+    // 将小数点往前移动两位
+    std::swap(str[decimalPos], str[decimalPos - 1]); // 交换小数点与前一位
+    std::swap(str[decimalPos - 1], str[decimalPos - 2]); // 交换小数点与前两位
+
+    return str;
+}
+int AVSManager::getLonAndLat(std::string portCom) {
+    this->longitude_ = "";
+    this->latitude_ = "";
+    if (portCom == "") {
+        return 1;
+    } else {
+        serial::Serial my_serial(portCom, 9600, serial::Timeout::simpleTimeout(1000));
+        if (my_serial.isOpen()) {
+            spdlog::info("串口正常打开");
+        } else {
+            spdlog::warn("串口{}打开异常", portCom);
+            return -1;
+        }
+        std::string line;
+        int timesout = 20;
+        do {
+            line = my_serial.readline();
+            timesout --;
+        } while(!extractLatLong(line, this->latitude_, this->longitude_) && timesout);
+        my_serial.close();
+        if (timesout == 0 || this->latitude_ == "" || this->longitude_ == "") {
+                spdlog::warn("串口 {} 读取异常", portCom);
+                return -1;
+        }
+        this->latitude_ = moveDecimalTwoPlaces(this->latitude_);
+        this->longitude_ = moveDecimalTwoPlaces(this->longitude_);
+        
+    }
     return 0;
 }

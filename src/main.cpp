@@ -25,7 +25,7 @@ std::atomic<AVSManager::AdjustMethod> globalMethod(AVSManager::AdjustMethod::ave
 std::shared_ptr<spdlog::logger> file_logger;
 std::unique_ptr<AVSManager> avsManager;
 
-void timerHookFunction(int, int, const std::filesystem::path &);
+void timerHookFunction(int, int, const std::filesystem::path &, std::string &);
 
 int main(int argc, const char *argv[]) {
     argparse::ArgumentParser program("avs-operator", versionOfAvsOperator);
@@ -69,7 +69,12 @@ int main(int argc, const char *argv[]) {
         .metavar("'average'|'maximum'")
         .help("set method average or maximum");
 
-    std::string outputFilePathStr, loggingFile;
+    program.add_argument("-p", "--port")
+        .default_value(std::string(""))
+        .metavar("COMx")
+        .help("set the com of GPS");
+
+    std::string outputFilePathStr, loggingFile, portCom;
     int measureTime, integralTime, integralNumber;
     try {
         program.parse_args(argc, argv);
@@ -128,6 +133,13 @@ int main(int argc, const char *argv[]) {
         return 8;
     }
 
+    try {
+        portCom = program.get<std::string>("port");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 9;
+    }
+
     if (loggingFile != "None") {
         file_logger = spdlog::basic_logger_mt("logger", loggingFile);
         spdlog::set_default_logger(file_logger);
@@ -147,12 +159,12 @@ int main(int argc, const char *argv[]) {
     }
     avsManager->activateDevice(numberID);
     while (measureTime--) {
-        timerHookFunction(integralTime, integralNumber, outputFilePath);
+        timerHookFunction(integralTime, integralNumber, outputFilePath, portCom);
     }
     return 0;
 }
 
-void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath) {
+void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath, std::string &portCom) {
     static unsigned int timeEntry = 0;
     int tick = timeVal * averageNumber;
 
@@ -170,7 +182,7 @@ void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::pa
     time_t inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
     std::this_thread::sleep_for(std::chrono::milliseconds(tick));
     auto retData = avsManager->measureData(avsManager->getActivateID());
-    avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData));
+    avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData), portCom);
 
     spdlog::info("Save the {} times Measure in PATH {}", ++timeEntry, outputFilePath.string());
 }
