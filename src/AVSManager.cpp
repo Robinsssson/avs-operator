@@ -243,12 +243,12 @@ static std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
-static bool extractLatLong(const std::string& gnrmc, std::string& latitude, std::string& longitude) {
+static bool extractGNRMCLatLong(const std::string& gnrmc, std::string& latitude, std::string& longitude) {
     // 检查是否以 $GNRMC 开头
     if (gnrmc.find("$GNRMC") == std::string::npos) {
         return false;
     }
-
+//    $GNRMC,044400.00,A,3358.97791,N,11648.40955,E,0.113,,100125,,,A,V*1F
     // 分割字符串
     std::vector<std::string> tokens = split(gnrmc, ',');
     if (tokens.size() < 6) {
@@ -261,26 +261,44 @@ static bool extractLatLong(const std::string& gnrmc, std::string& latitude, std:
 
     return true;
 }
-static std::string moveDecimalTwoPlaces(std::string str) {
-    size_t decimalPos = str.find('.'); // 找到小数点的位置
 
-    if (decimalPos == std::string::npos) {
-        // 如果没有小数点，直接在末尾添加 ".00"
-        return str + ".00";
+/**
+ * @brief 将度分格式转换为十进制度格式
+ * @param degreesMinutes 度分格式字符串（例如 "12345.67" 表示 123度45.67分）
+ * @return 十进制度字符串，小数部分最多保留8位
+ */
+ static std::string convertDegreesMinutesToDecimal(const std::string& degreesMinutes) {
+    double totalValue = std::stod(degreesMinutes);
+    int degreesPart = std::round(totalValue);
+    
+    // 分离度和分部分
+    degreesPart = degreesPart / 100;  // 提取度数部分
+    double minutesPart = totalValue - degreesPart * 100;
+    
+    // 转换分到十进制小数
+    double decimalDegrees = minutesPart / 60 + degreesPart;
+    
+    // 格式化输出
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(8) << decimalDegrees;
+    std::string result = oss.str();
+    
+    // 清除无效尾零和小数点
+    size_t decimalPoint = result.find('.');
+    if (decimalPoint != std::string::npos) {
+        // 从末尾移除多余的零
+        size_t lastSignificant = result.find_last_not_of('0', result.size() - 1);
+        if (lastSignificant != std::string::npos && lastSignificant >= decimalPoint) {
+            result.erase(lastSignificant + 1, std::string::npos);
+            if (result.back() == '.') {
+                result.pop_back();  // 清除孤立的小数点
+            }
+        }
     }
-
-    if (decimalPos < 2) {
-        // 如果小数点前面不足两位，在前面补零
-        str.insert(0, 2 - decimalPos, '0');
-        decimalPos = str.find('.'); // 更新小数点的位置
-    }
-
-    // 将小数点往前移动两位
-    std::swap(str[decimalPos], str[decimalPos - 1]); // 交换小数点与前一位
-    std::swap(str[decimalPos - 1], str[decimalPos - 2]); // 交换小数点与前两位
-
-    return str;
+    
+    return result;
 }
+
 int AVSManager::getLonAndLat(std::string portCom) {
     this->longitude_ = "";
     this->latitude_ = "";
@@ -299,14 +317,14 @@ int AVSManager::getLonAndLat(std::string portCom) {
         do {
             line = my_serial.readline();
             timesout --;
-        } while(!extractLatLong(line, this->latitude_, this->longitude_) && timesout);
+        } while(!extractGNRMCLatLong(line, this->latitude_, this->longitude_) && timesout);
         my_serial.close();
         if (timesout == 0 || this->latitude_ == "" || this->longitude_ == "") {
                 spdlog::warn("串口 {} 读取异常", portCom);
                 return -1;
         }
-        this->latitude_ = moveDecimalTwoPlaces(this->latitude_);
-        this->longitude_ = moveDecimalTwoPlaces(this->longitude_);
+        this->latitude_ = convertDegreesMinutesToDecimal(this->latitude_);
+        this->longitude_ = convertDegreesMinutesToDecimal(this->longitude_);
         
     }
     return 0;
