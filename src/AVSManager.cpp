@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ctime>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -18,7 +19,6 @@
 #include "Utility.h"
 #include "fmt/chrono.h"
 #include "lib/avaspecx64.h"
-
 
 static MeasConfigType initMeasConfig(int numPixels, double integralTime, int averagesNum) {
     MeasConfigType measConfigure;
@@ -233,7 +233,7 @@ int AVSManager::adjustVal(const std::vector<double> &data, double angle, AVSMana
     return int(adjustValue);
 }
 
-static std::vector<std::string> split(const std::string& str, char delimiter) {
+static std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     std::istringstream tokenStream(str);
@@ -243,21 +243,21 @@ static std::vector<std::string> split(const std::string& str, char delimiter) {
     return tokens;
 }
 
-static bool extractGNRMCLatLong(const std::string& gnrmc, std::string& latitude, std::string& longitude) {
+static bool extractGNRMCLatLong(const std::string &gnrmc, std::string &latitude, std::string &longitude) {
     // 检查是否以 $GNRMC 开头
     if (gnrmc.find("$GNRMC") == std::string::npos) {
         return false;
     }
-//    $GNRMC,044400.00,A,3358.97791,N,11648.40955,E,0.113,,100125,,,A,V*1F
+    //    $GNRMC,044400.00,A,3358.97791,N,11648.40955,E,0.113,,100125,,,A,V*1F
     // 分割字符串
     std::vector<std::string> tokens = split(gnrmc, ',');
     if (tokens.size() < 6) {
-        return false; // 数据格式不正确
+        return false;  // 数据格式不正确
     }
 
     // 提取纬度和经度
-    latitude = tokens[3];  // 纬度
-    longitude = tokens[5]; // 经度
+    latitude = tokens[3];   // 纬度
+    longitude = tokens[5];  // 经度
 
     return true;
 }
@@ -267,22 +267,22 @@ static bool extractGNRMCLatLong(const std::string& gnrmc, std::string& latitude,
  * @param degreesMinutes 度分格式字符串（例如 "12345.67" 表示 123度45.67分）
  * @return 十进制度字符串，小数部分最多保留8位
  */
- static std::string convertDegreesMinutesToDecimal(const std::string& degreesMinutes) {
+static std::string convertDegreesMinutesToDecimal(const std::string &degreesMinutes) {
     double totalValue = std::stod(degreesMinutes);
     int degreesPart = std::round(totalValue);
-    
+
     // 分离度和分部分
     degreesPart = degreesPart / 100;  // 提取度数部分
     double minutesPart = totalValue - degreesPart * 100;
-    
+
     // 转换分到十进制小数
     double decimalDegrees = minutesPart / 60 + degreesPart;
-    
+
     // 格式化输出
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(8) << decimalDegrees;
     std::string result = oss.str();
-    
+
     // 清除无效尾零和小数点
     size_t decimalPoint = result.find('.');
     if (decimalPoint != std::string::npos) {
@@ -295,7 +295,7 @@ static bool extractGNRMCLatLong(const std::string& gnrmc, std::string& latitude,
             }
         }
     }
-    
+
     return result;
 }
 
@@ -307,25 +307,24 @@ int AVSManager::getLonAndLat(std::string portCom) {
     } else {
         serial::Serial my_serial(portCom, 9600, serial::Timeout::simpleTimeout(1000));
         if (my_serial.isOpen()) {
-            spdlog::info("串口正常打开");
+            spdlog::info("serial port open right.");
         } else {
-            spdlog::warn("串口{}打开异常", portCom);
-            return -1;
+            spdlog::warn("serial port:{} open failed.", portCom);
+            throw std::exception("serial port open error");
         }
         std::string line;
         int timesout = 20;
         do {
             line = my_serial.readline();
-            timesout --;
-        } while(!extractGNRMCLatLong(line, this->latitude_, this->longitude_) && timesout);
+            timesout--;
+        } while (!extractGNRMCLatLong(line, this->latitude_, this->longitude_) && timesout);
         my_serial.close();
         if (timesout == 0 || this->latitude_ == "" || this->longitude_ == "") {
-                spdlog::warn("串口 {} 读取异常", portCom);
-                return -1;
+            spdlog::warn("serial port {} reader error", portCom);
+            return -1;
         }
         this->latitude_ = convertDegreesMinutesToDecimal(this->latitude_);
         this->longitude_ = convertDegreesMinutesToDecimal(this->longitude_);
-        
     }
     return 0;
 }

@@ -6,6 +6,7 @@
 #include <atomic>
 #include <chrono>
 #include <ctime>
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -69,10 +70,7 @@ int main(int argc, const char *argv[]) {
         .metavar("'average'|'maximum'")
         .help("set method average or maximum");
 
-    program.add_argument("-p", "--port")
-        .default_value(std::string(""))
-        .metavar("COMx")
-        .help("set the com of GPS");
+    program.add_argument("-p", "--port").default_value(std::string("")).metavar("COMx").help("set the com of GPS");
 
     std::string outputFilePathStr, loggingFile, portCom;
     int measureTime, integralTime, integralNumber;
@@ -158,13 +156,19 @@ int main(int argc, const char *argv[]) {
         return -1;
     }
     avsManager->activateDevice(numberID);
-    while (measureTime--) {
-        timerHookFunction(integralTime, integralNumber, outputFilePath, portCom);
+    try {
+        while (measureTime--) {
+            timerHookFunction(integralTime, integralNumber, outputFilePath, portCom);
+        }
+    } catch (std::exception &e) {
+        spdlog::error("get a unprocess error {}", e.what());
+        return -7;
     }
     return 0;
 }
 
-void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath, std::string &portCom) {
+void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath,
+                       std::string &portCom) {
     static unsigned int timeEntry = 0;
     int tick = timeVal * averageNumber;
 
