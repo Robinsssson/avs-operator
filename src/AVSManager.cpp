@@ -3,6 +3,7 @@
 #include <serial/serial.h>
 #include <spdlog/spdlog.h>
 #include <time.h>
+#include <winnls.h>
 
 #include <algorithm>
 #include <cmath>
@@ -147,12 +148,13 @@ std::tuple<std::vector<double>, std::time_t> AVSManager::measureData(int numberI
 int AVSManager::saveDataInFile(const std::filesystem::path &filePath, std::vector<double> data, time_t inputTimeT,
                                time_t outputTimeT, std::string portCom) {
     // 获取经纬度信息
-    this->getLonAndLat(portCom);
-
+    bool gpsReaderNormalState = true;
+    if (this->getLonAndLat(portCom) != 0) gpsReaderNormalState = false;
     // 构造文件名，确保格式化中不包含非法字符
     auto inputTime = fmt::localtime(inputTimeT);
     std::filesystem::path saveFilePath =
-        filePath / fmt::format("{0}{1:03d}{2:%H%M%S}.std", this->angle_ == 90 ? 'L' : 'S', this->angle_, inputTime);
+    gpsReaderNormalState ? filePath / fmt::format("{0}{1:03d}{2:%H%M%S}.std", this->angle_ == 90 ? 'L' : 'S', this->angle_, inputTime)
+    : filePath / fmt::format("{0}{1:03d}{2:%H%M%S}-gps-error.std", this->angle_ == 90 ? 'L' : 'S', this->angle_, inputTime);
     const auto saveFileName = saveFilePath.filename().string();
 
     spdlog::info("{} file has been created", saveFileName);
@@ -245,10 +247,11 @@ static std::vector<std::string> split(const std::string &str, char delimiter) {
 
 static bool extractGNRMCLatLong(const std::string &gnrmc, std::string &latitude, std::string &longitude) {
     // 检查是否以 $GNRMC 开头
-    if (gnrmc.find("$GNRMC") == std::string::npos) {
+    if (gnrmc.find("$GNRMC") != 0) {
         return false;
     }
     //    $GNRMC,044400.00,A,3358.97791,N,11648.40955,E,0.113,,100125,,,A,V*1F
+    //    $GNRMC,073002.00,A,3358.98868,N,11648.39866,E,0.032,,120425,,,A,V*11
     // 分割字符串
     std::vector<std::string> tokens = split(gnrmc, ',');
     if (tokens.size() < 6) {
@@ -313,13 +316,13 @@ int AVSManager::getLonAndLat(std::string portCom) {
             throw std::exception("serial port open error");
         }
         std::string line;
-        int timesout = 20;
+        int timeout = 20;
         do {
             line = my_serial.readline();
-            timesout--;
-        } while (!extractGNRMCLatLong(line, this->latitude_, this->longitude_) && timesout);
+        } while (!extractGNRMCLatLong(line, this->latitude_, this->longitude_) && timeout--);
+        spdlog::info("READ the GNRMC str:{}", line);
         my_serial.close();
-        if (timesout == 0 || this->latitude_ == "" || this->longitude_ == "") {
+        if (this->latitude_ == "" || this->longitude_ == "" || line == "") {
             spdlog::warn("serial port {} reader error", portCom);
             return -1;
         }

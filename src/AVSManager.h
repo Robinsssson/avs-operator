@@ -25,7 +25,7 @@ class AVSManager final {
     int getActivateID() const { return activatedDeviceID_; }
     int adjustVal(const std::vector<double> &data, double angle, AdjustMethod method = AdjustMethod::average);
     int getLonAndLat(std::string portCom);
-
+    void setAngle(int angle) {angle_ = angle;} 
    private:
     std::string versionInfo_;
     std::unique_ptr<AvsIdentityType[]> avsIdentityList_;

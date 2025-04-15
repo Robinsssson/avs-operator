@@ -17,6 +17,7 @@
 #include "AVSManager.h"
 #include "Utility.h"
 #include "fmt/chrono.h"
+#include "spdlog/common.h"
 
 static const std::string versionOfAvsOperator = "1.0.0";
 
@@ -26,7 +27,7 @@ std::atomic<AVSManager::AdjustMethod> globalMethod(AVSManager::AdjustMethod::ave
 std::shared_ptr<spdlog::logger> file_logger;
 std::unique_ptr<AVSManager> avsManager;
 
-void timerHookFunction(int, int, const std::filesystem::path &, std::string &);
+void timerHookFunction(int, int, const std::filesystem::path &, std::string &, bool);
 
 int main(int argc, const char *argv[]) {
     argparse::ArgumentParser program("avs-operator", versionOfAvsOperator);
@@ -70,10 +71,17 @@ int main(int argc, const char *argv[]) {
         .metavar("'average'|'maximum'")
         .help("set method average or maximum");
 
+    program.add_argument("--disable-adjust")
+        .default_value(false)
+        .metavar("boolean")
+        .help("set true will adjust value")
+        .implicit_value(true);
+
     program.add_argument("-p", "--port").default_value(std::string("")).metavar("COMx").help("set the com of GPS");
 
     std::string outputFilePathStr, loggingFile, portCom;
     int measureTime, integralTime, integralNumber;
+    bool disableAdjust;
     try {
         program.parse_args(argc, argv);
     } catch (const std::exception &e) {
@@ -138,10 +146,19 @@ int main(int argc, const char *argv[]) {
         return 9;
     }
 
+    try {
+        disableAdjust = program.get<bool>("--disable-adjust");
+    } catch (const std::exception &e) {
+        fmt::println(std::cerr, e.what());
+        return 10;
+    }
+
     if (loggingFile != "None") {
         file_logger = spdlog::basic_logger_mt("logger", loggingFile);
         spdlog::set_default_logger(file_logger);
     }
+    
+    spdlog::set_level(spdlog::level::debug);
 
     spdlog::info("the output file of log is in {}", outputFilePathStr);
     auto dirName = fmt::format("{:%Y-%m-%d}", fmt::localtime(avs_util::getCurrentTimeT()));
@@ -158,7 +175,7 @@ int main(int argc, const char *argv[]) {
     avsManager->activateDevice(numberID);
     try {
         while (measureTime--) {
-            timerHookFunction(integralTime, integralNumber, outputFilePath, portCom);
+            timerHookFunction(integralTime, integralNumber, outputFilePath, portCom, disableAdjust);
         }
     } catch (std::exception &e) {
         spdlog::error("get a unprocess error {}", e.what());
@@ -168,23 +185,26 @@ int main(int argc, const char *argv[]) {
 }
 
 void timerHookFunction(int timeVal, int averageNumber, const std::filesystem::path &outputFilePath,
-                       std::string &portCom) {
+                       std::string &portCom, bool disableAdjust) {
     static unsigned int timeEntry = 0;
     int tick = timeVal * averageNumber;
 
     spdlog::info("Start Adjust Measure");
 
-    avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
-    std::this_thread::sleep_for(std::chrono::milliseconds(tick));
-    auto adjustData = avsManager->measureData(avsManager->getActivateID());
-
-    timeVal = avsManager->adjustVal(std::get<0>(adjustData), globalAngleOfMotor, globalMethod);
-
-    spdlog::info("Adjust integral-Time to {}", timeVal);
-    spdlog::info("Start Right Measure");
-
     time_t inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
     std::this_thread::sleep_for(std::chrono::milliseconds(tick));
+    if (!disableAdjust) {
+        auto adjustData = avsManager->measureData(avsManager->getActivateID());
+        timeVal = avsManager->adjustVal(std::get<0>(adjustData), globalAngleOfMotor, globalMethod);
+    
+        spdlog::info("Adjust integral-Time to {}", timeVal);
+        spdlog::info("Start Right Measure");
+    
+        inputTimeT = avsManager->measurePerpare(avsManager->getActivateID(), timeVal, averageNumber);
+        std::this_thread::sleep_for(std::chrono::milliseconds(tick));
+    } else {
+        avsManager->setAngle(globalAngleOfMotor);
+    }
     auto retData = avsManager->measureData(avsManager->getActivateID());
     avsManager->saveDataInFile(outputFilePath, std::get<0>(retData), inputTimeT, std::get<1>(retData), portCom);
 
